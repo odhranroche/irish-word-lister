@@ -1,10 +1,10 @@
 """Build Glantóir Focal into one self-contained HTML file.
 
-    python3 build.py   ->  dist/glantoir.html   the offline app: a complete HTML document
-                           dist/artifact.html   the same page without the document wrapper,
-                                                for publishing as a claude.ai artifact (which adds its own)
+    python3 build.py              ->  dist/index.html   the app: the only file to publish (upload it as it is)
+    python3 build.py --artifact   ->  also artifact/glantoir.html, the same page without the document
+                                      wrapper, for publishing as a claude.ai artifact (which adds its own)
 
-src/index.html   styles and markup, with /*APP*/ and /*DICT*/ placeholders
+src/page.html    the page template: styles and markup, with /*APP*/ and /*DICT*/ placeholders (never publish it)
 src/engine.js   rules engine: dictionary loading, mutations, merges, pair suggestions
 src/ui.js       interface: text extraction, names and English, steps 1-3, downloads
 data/bunamo_index.txt   compact BuNaMo index (made by scripts/build_index.py)
@@ -18,6 +18,7 @@ import gzip
 import hashlib
 import os
 import re
+import sys
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -28,7 +29,7 @@ def read(*p):
 
 
 def main():
-    page = read('src', 'index.html')
+    page = read('src', 'page.html')
     app = read('src', 'engine.js') + read('src', 'ui.js')
     for ph in ('/*APP*/', '/*DICT*/', "(/*ENGLISH*/'')"):
         target = app if ph.startswith('(') else page
@@ -49,11 +50,17 @@ def main():
            f'<title>{title}</title>\n'
            f'<meta name="description" content="{title}: merge every form of an Irish word into its headword. Works offline.">\n'
            '</head>\n<body>\n' + re.sub(r'<title>.*?</title>\n', '', body, count=1) + '</body>\n</html>\n')
-    os.makedirs(os.path.join(ROOT, 'dist'), exist_ok=True)
-    # The offline file starts with a UTF-8 byte-order mark. Browsers trust it over everything else, so the
-    # fadas display correctly even when a web server sends a wrong charset (á shown as Ã¡).
-    for name, html, enc in (('glantoir.html', doc, 'utf-8-sig'), ('artifact.html', body, 'utf-8')):
-        out = os.path.join(ROOT, 'dist', name)
+    # dist/ holds exactly one file. It starts with a UTF-8 byte-order mark: browsers trust it over everything
+    # else, so the fadas display correctly even when a web server sends a wrong charset (á shown as Ã¡).
+    outputs = [('dist', 'index.html', doc, 'utf-8-sig')]
+    if '--artifact' in sys.argv[1:]:
+        outputs.append(('artifact', 'glantoir.html', body, 'utf-8'))
+    for folder, name, html, enc in outputs:
+        os.makedirs(os.path.join(ROOT, folder), exist_ok=True)
+        for old in os.listdir(os.path.join(ROOT, folder)):     # clear out anything an older build left behind
+            if old != name and old.endswith('.html'):
+                os.remove(os.path.join(ROOT, folder, old))
+        out = os.path.join(ROOT, folder, name)
         with open(out, 'w', encoding=enc) as f:
             f.write(html)
         print(f'built {os.path.relpath(out, ROOT)} ({len(html.encode()) / 1024:.0f} KB)')

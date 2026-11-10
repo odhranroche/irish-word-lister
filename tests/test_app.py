@@ -1,4 +1,4 @@
-"""Browser tests for dist/glantoir.html (headless Chromium through Playwright).
+"""Browser tests for dist/index.html (headless Chromium through Playwright).
 
     python3 build.py && python3 tests/test_app.py
 
@@ -14,7 +14,7 @@ import sys
 from playwright.async_api import async_playwright
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PAGE = 'file://' + os.path.join(ROOT, 'dist', 'glantoir.html')
+PAGE = 'file://' + os.path.join(ROOT, 'dist', 'index.html')
 FIX = os.path.join(ROOT, 'tests', 'fixtures')
 DEFAULTS = {'noun': True, 'adj': True, 'verb': True, 'vn': True, 'vnall': False, 'irr': False, 'prep': False,
             'abs': False, 'dictonly': True, 'eng': True, 'short': False, 'shorthead': False}
