@@ -102,7 +102,7 @@ async def main():
               ["'=1+1", '"a,b"', 'bád'])
 
         # fixtures (snapshots)
-        for name, want in (('cursai-oibre.txt', 636), ('an-teaghlach.txt', 441)):
+        for name, want in (('cursai-oibre.txt', 636), ('an-teaghlach.txt', 437)):
             text = open(os.path.join(FIX, name), encoding='utf-8').read()
             check(f'{name} with default settings', len(await clean(page, text)), want)
 

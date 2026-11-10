@@ -88,7 +88,9 @@ function leftOut(r) {
   if (OPT.eng && r.w.includes("'") && !/^[dbms]'\p{L}{2,}$/u.test(r.w)) return 'english';
   // An English word is left out when no reading of it is Irish, or when it only ever appears in English sentences.
   // So 'the' in an English sentence is English, but 'oíche the' keeps the Irish word te.
-  if (OPT.eng && /^[a-z]+$/.test(r.w) && ENGLISH.has(r.w) && !fs.some((f) => PROPER.has(f) || PLACES.has(f))
+  // A word only ever written with a capital, and capitalised mid-sentence, is a name even if it is also English (Marcus, Liberation).
+  const capName = !r.lower && r.mid && !known;
+  if (OPT.eng && /^[a-z]+$/.test(r.w) && ENGLISH.has(r.w) && !capName && !fs.some((f) => PROPER.has(f) || PLACES.has(f) || FIRST_NAMES.has(f))
     && (!known || r.enCount === r.count)) return 'english';
   if (fs.some((f) => CALENDAR.has(f) || FUNC.has(f))) return '';
   // A known name or place written in lower case (transcripts, subtitles) is still a name, unless some reading

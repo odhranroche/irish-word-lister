@@ -8,7 +8,7 @@ src/page.html    the page template: styles and markup, with /*APP*/ and /*DICT*/
 src/engine.js   rules engine: dictionary loading, mutations, merges, pair suggestions
 src/ui.js       interface: text extraction, names and English, steps 1-3, downloads
 data/bunamo_index.txt   compact BuNaMo index (made by scripts/build_index.py)
-data/english_top.txt    5,000 most frequent English words (made by scripts/make_english.py)
+data/english_top.txt    10,000 most frequent English words (made by scripts/make_english.py)
 assets/fonts/           Lexend and Atkinson Hyperlegible (SIL Open Font License), inlined as data URIs
 
 The dictionary is gzipped with a fixed timestamp, so the same sources always give the same file.

@@ -1,4 +1,4 @@
-"""Make data/english_top.txt: the 5,000 most frequent English words, one per line.
+"""Make data/english_top.txt: the 10,000 most frequent English words, one per line.
 
 Source: wordfreq's small English list (https://github.com/rspeer/wordfreq, data under CC BY-SA 4.0):
     curl -LO https://raw.githubusercontent.com/rspeer/wordfreq/master/wordfreq/data/small_en.msgpack.gz
@@ -14,7 +14,7 @@ import sys
 
 import msgpack
 
-N = 5000
+N = 10000
 
 
 def main(src, out):

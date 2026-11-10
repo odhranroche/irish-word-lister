@@ -28,7 +28,7 @@ The page follows the Odhrán Roche style guide (odhranroche.com): paper and ink 
 | `build.py` | Joins the sources and embeds the data and fonts, producing `dist/index.html`. |
 | `assets/fonts/` | Lexend (400, 500, 600) and Atkinson Hyperlegible (400, 700), Latin subsets, with their licences. |
 | `data/bunamo_index.txt` | Compact BuNaMo index: one line per entry, `lemma \t pos \t gender \t type:form,…`. pos is n, a, v, p, or N for a proper noun. |
-| `data/english_top.txt` | The 5,000 most frequent English words, one per line. |
+| `data/english_top.txt` | The 10,000 most frequent English words, one per line. |
 | `scripts/build_index.py` | Rebuilds `data/bunamo_index.txt` from a BuNaMo checkout (https://github.com/michmech/BuNaMo). |
 | `scripts/make_english.py` | Rebuilds `data/english_top.txt` from wordfreq's `small_en.msgpack.gz`. |
 | `tests/test_app.py` | Rule, English, name, saved-choice, CSV, offline and fallback tests, plus snapshot counts for the two fixture texts. |
@@ -117,7 +117,7 @@ Each word goes through these steps in order, and the first one that applies wins
     - BuNaMo proper nouns, places and common first names;
     - multi-word places (*Baile Átha Cliath*, *Béal Feirste*, *Dún na Gall*…);
     - unknown words only ever written with a capital that is used mid-sentence. A capital after a mutation prefix counts (*hÉireann*, *tSionainn*, *nGaillimh*).
-  - **English** (a setting): words in the top 5,000 English list when no reading of them is Irish, or when they only appear in English sentences. A sentence is English when its English-only words are at least twice its Irish words. So *the* in an English sentence is left out, but *oíche the* keeps *te*. Words with an apostrophe anywhere other than after a first d, b, m or s (*it's*, *Tom's*) are English.
+  - **English** (a setting): words in the top 10,000 English list when no reading of them is Irish, or when they only appear in English sentences. A sentence is English when its English-only words are at least twice its Irish words. So *the* in an English sentence is left out, but *oíche the* keeps *te*. Words with an apostrophe anywhere other than after a first d, b, m or s (*it's*, *Tom's*) are English.
   - Names written in lower case (*seán*, *gaillimh*) are names when the name lists know them and no reading is an ordinary Irish word.
   - **Acronyms**: all capitals, unknown, five letters or fewer (*TEG*, *QR*).
 - Settings can also leave out 1–2 letter words, or every word whose headword has 1–2 letters (*bíonn* → *bí*).
