@@ -14,8 +14,17 @@ function irishBase(w) {
   if (!_ib.has(w)) _ib.set(w, bases(w).some(([b]) => DICT.forms.has(b)));
   return _ib.get(w);
 }
+// Longest word kept. Irish words run to about 30 letters; anything longer is not a word, and a huge token would
+// make the similarity checks slow enough to freeze the page.
+const MAX_WORD = 40;
 function extract(text) {
-  text = text.replace(/https?:\/\/\S+|www\.\S+|\S+@\S+\.\S+/gi, ' ')
+  // NFC joins letters typed as a base letter plus a combining accent (a + ´ → á), common in text from macOS.
+  // Invisible format characters (zero-width spaces, direction overrides, byte-order marks) are dropped.
+  text = text.normalize('NFC').replace(/[\u00AD\u200B-\u200F\u202A-\u202E\u2060-\u2064\uFEFF]/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, ' ')
+    // a run of 200+ characters without a space is not text (and would make the patterns below slow)
+    .replace(/\S{200,}/g, ' ')
+    // web links and e-mail addresses
+    .replace(/(?:https?:\/\/|www\.)\S+|[^\s@]+@[^\s@]+\.[^\s@]+/gi, ' ')
     // optional letters in brackets: c(h)uid → cuid, Ceist(eanna) → Ceist
     .replace(/(\p{L}+)\(\p{L}+\)(\p{L}*)/gu, (m, a, c) => a + c);
   const rows = new Map();
@@ -25,6 +34,7 @@ function extract(text) {
     for (const m of sent.matchAll(/\p{L}+(?:['’-]\p{L}+)*/gu)) {
       // an ending written as an example ('-áil', -áin) is not a word
       if (m.index > 0 && sent[m.index - 1] === '-' && !/\p{L}/u.test(sent[m.index - 2] || '')) continue;
+      if (m[0].length > MAX_WORD) continue;
       toks.push(m[0]);
     }
     const norms = toks.map(norm);
@@ -112,7 +122,7 @@ function checkDocument(words) {
     let both = 0; for (const w of b) if (a.has(w)) both++;
     const overlap = both / (a.size + b.size - both);
     if (overlap < 0.8) {
-      DEC = {}; removed = new Set(); DROPPED = new Set(); namesKept = new Set();
+      DEC = Object.create(null); removed = new Set(); DROPPED = new Set(); namesKept = new Set();
       store.set('decisions', DEC); store.set('removed', []); store.set('dropped', []); store.set('namesKept', []);
     }
   }
@@ -167,7 +177,7 @@ function restore() {
     for (const k of OPT_KEYS) if (k in o) $('opt-' + k).checked = !!o[k];
     if (o.th) { $('opt-th').value = o.th; $('th-out').value = Number(o.th).toFixed(2); }
   }
-  DEC = store.get('decisions', {});
+  DEC = Object.assign(Object.create(null), store.get('decisions', {}));
   removed = new Set(store.get('removed', []));
   DROPPED = new Set(store.get('dropped', []));
   namesKept = new Set(store.get('namesKept', []));
@@ -234,7 +244,8 @@ function defaultHead(s) {
 }
 function renderCard() {
   const total = SUGG.length;
-  $('p2-count').textContent = total ? `${Math.min(pos + 1, total)} of ${total}` : '';
+  $('p2-count').textContent = (total ? `${Math.min(pos + 1, total)} of ${total}` : '')
+    + (SUGG_CUT ? `${total ? ' · ' : ''}Too many similar words to compare them all; some pairs were skipped` : '');
   $('p2-fill').style.width = total ? (100 * SUGG.filter((s) => DEC[s.id]).length / total) + '%' : '0';
   $('k-prev').disabled = pos === 0;
   $('k-next').hidden = pos >= total;

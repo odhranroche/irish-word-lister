@@ -4,7 +4,7 @@
                            dist/artifact.html   the same page without the document wrapper,
                                                 for publishing as a claude.ai artifact (which adds its own)
 
-src/page.html   styles and markup, with /*APP*/ and /*DICT*/ placeholders
+src/index.html   styles and markup, with /*APP*/ and /*DICT*/ placeholders
 src/engine.js   rules engine: dictionary loading, mutations, merges, pair suggestions
 src/ui.js       interface: text extraction, names and English, steps 1-3, downloads
 data/bunamo_index.txt   compact BuNaMo index (made by scripts/build_index.py)
@@ -15,6 +15,7 @@ The dictionary is gzipped with a fixed timestamp, so the same sources always giv
 """
 import base64
 import gzip
+import hashlib
 import os
 import re
 
@@ -27,7 +28,7 @@ def read(*p):
 
 
 def main():
-    page = read('src', 'page.html')
+    page = read('src', 'index.html')
     app = read('src', 'engine.js') + read('src', 'ui.js')
     for ph in ('/*APP*/', '/*DICT*/', "(/*ENGLISH*/'')"):
         target = app if ph.startswith('(') else page
@@ -42,16 +43,32 @@ def main():
     body = page.replace('/*APP*/', app).replace('/*DICT*/', dict_b64)
     title = re.search(r'<title>(.*?)</title>', body).group(1)
     doc = ('<!doctype html>\n<html lang="en-IE">\n<head>\n<meta charset="utf-8">\n'
+           f'<meta http-equiv="Content-Security-Policy" content="{csp(body)}">\n'
+           '<meta name="referrer" content="no-referrer">\n'
            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
            f'<title>{title}</title>\n'
            f'<meta name="description" content="{title}: merge every form of an Irish word into its headword. Works offline.">\n'
            '</head>\n<body>\n' + re.sub(r'<title>.*?</title>\n', '', body, count=1) + '</body>\n</html>\n')
     os.makedirs(os.path.join(ROOT, 'dist'), exist_ok=True)
-    for name, html in (('glantoir.html', doc), ('artifact.html', body)):
+    # The offline file starts with a UTF-8 byte-order mark. Browsers trust it over everything else, so the
+    # fadas display correctly even when a web server sends a wrong charset (á shown as Ã¡).
+    for name, html, enc in (('glantoir.html', doc, 'utf-8-sig'), ('artifact.html', body, 'utf-8')):
         out = os.path.join(ROOT, 'dist', name)
-        with open(out, 'w', encoding='utf-8') as f:
+        with open(out, 'w', encoding=enc) as f:
             f.write(html)
         print(f'built {os.path.relpath(out, ROOT)} ({len(html.encode()) / 1024:.0f} KB)')
+
+
+def csp(body):
+    """A strict Content Security Policy for the offline file: only this page's own script and style block
+    may run (pinned by hash), fonts and icons come from data: URIs, and nothing can be loaded from or sent
+    to the network. Downloads use blob: URLs. A web server can add frame-ancestors as a header."""
+    def hashes(tag):
+        blocks = re.findall(rf'<{tag}>(.*?)</{tag}>', body, flags=re.S)
+        assert blocks, f'no <{tag}> block found'
+        return ' '.join("'sha256-" + base64.b64encode(hashlib.sha256(b.encode()).digest()).decode() + "'" for b in blocks)
+    return ("default-src 'none'; script-src " + hashes('script') + "; style-src " + hashes('style')
+            + "; font-src data:; img-src data: blob:; base-uri 'none'; form-action 'none'")
 
 
 def font_uri(m):

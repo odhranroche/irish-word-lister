@@ -175,6 +175,8 @@ const CONTRACTIONS = { den: 'de', don: 'do', dá: 'do', faoin: 'faoi', faoina: '
 // Genitives of months, days and feasts
 const CAL_GEN = { luain: 'luan', máirte: 'máirt', sathairn: 'satharn', domhnaigh: 'domhnach', nollag: 'nollaig', samhna: 'samhain',
   fómhair: 'fómhar', cásca: 'cáisc', aibreáin: 'aibreán', meithimh: 'meitheamh', earraigh: 'earrach', geimhridh: 'geimhreadh', samhraidh: 'samhradh' };
+// Words from the text are looked up in these tables, so they must not inherit keys like 'constructor'
+for (const t of [IRREG_SUPP, EMPH_PRON, CONTRACTIONS, CAL_GEN]) Object.setPrototypeOf(t, null);
 const UNLEN = new Set('bcdfgmpt');
 // Standard words whose spelling only looks mutated: never strip them (thuaidh is not a lenited *tuaidh*)
 const NO_STRIP = new Set(['thuaidh', 'theas', 'thiar', 'thoir', 'thall', 'thuas', 'thíos', 'thart', 'thar', 'thairis', 'cheana', 'chomh',
@@ -283,6 +285,9 @@ function lemmasOf(form) {
 const DERIV = new Set(['vn', 'va', 'cmp', 'abs']);
 const label = (types) => { const ts = [...types]; const t = ts.find((x) => DERIV.has(x)) || ts.find((x) => x !== 'lemma') || 'lemma'; return t === 'lemma' ? 'dictionary form' : TYPEN[t]; };
 
+const MAX_COMPARISONS = 5e6;
+const MAX_PAIRS = 3000;       // more pairs than anyone would check by hand
+let SUGG_CUT = false;  // true when the work budget or the pair limit cut the suggestions short
 let SUGG = [];       // [{a, b, score, reasons[]}]
 // ---- helpers for the analysis
 const letters = (w) => [...w.replace(/['’-]/g, '')].length;
@@ -542,6 +547,7 @@ function key(w) {                     // mutations stripped, fadas folded
 }
 const lemmaOnly = (w) => (DICT.forms.get(w) || []).some(([, t]) => t === 'lemma');
 function buildSuggestions(ambiguous) {
+  SUGG_CUT = false;
   const groups = new Map();
   W.forEach((_, i) => { const r = find(i); if (!groups.has(r)) groups.set(r, i); });
   const reps = [...groups.keys()].map((r) => ({ r, w: headOf(r), k: key(headOf(r)) }));
@@ -552,16 +558,21 @@ function buildSuggestions(ambiguous) {
     const id = x + '|' + y;
     const s = out.get(id);
     if (s) { s.score = Math.max(s.score, score); if (!s.reasons.includes(reason)) s.reasons.push(reason); }
-    else out.set(id, { id, a: x, b: y, score, reasons: [reason] });
+    else if (out.size < MAX_PAIRS * 5) out.set(id, { id, a: x, b: y, score, reasons: [reason] });
+    else SUGG_CUT = true;
   };
   for (const [w, h, r, sc] of ambiguous) push(w, h, sc || 0.99, r);
   const byStart = new Map();
   for (const x of reps) { const s = x.k.slice(0, 2); if (!byStart.has(s)) byStart.set(s, []); byStart.get(s).push(x); }
   // Within a block, words are sorted by length and only compared with words at most 5 letters longer:
   // no Irish ending link adds more than that, and longer gaps are not spelling variants. This keeps large files fast.
-  for (const list of byStart.values()) {
+  // A budget caps the work: real texts need far fewer comparisons (30,000 different words take about 1.6 million),
+  // but a file built to be pathological (thousands of near-identical long words) would otherwise freeze the page.
+  let budget = MAX_COMPARISONS;
+  outer: for (const list of byStart.values()) {
     list.sort((x, y) => x.k.length - y.k.length);
     for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length && list[j].k.length - list[i].k.length <= 5; j++) {
+      if (SUGG_CUT || --budget < 0) { SUGG_CUT = true; break outer; }
       const A = list[i], B = list[j];
       if (A.r === B.r) continue;
       if (A.k === B.k) {
@@ -588,10 +599,12 @@ function buildSuggestions(ambiguous) {
     s.rank = s.score - (bothLemmas && s.score < 0.99 ? 0.04 : 0);
     return s;
   }).sort((x, y) => y.rank - x.rank || x.a.localeCompare(y.a, 'ga'));
+  // keep the strongest pairs when there are more than anyone would check by hand
+  if (SUGG.length > MAX_PAIRS) { SUGG.length = MAX_PAIRS; SUGG_CUT = true; }
 }
 
 // =====================================================================  state from decisions
-let DEC = {};       // suggestion id -> {d: 'merge'|'keep', head}
+let DEC = Object.create(null);     // suggestion id -> {d: 'merge'|'keep', head}
 let hist = [];
 let pos = 0;
 function nodeOfWord(w) { return idx.has(w) ? idx.get(w) : extra.get(w); }

@@ -36,6 +36,7 @@ async def open_page(browser, no_decompression_stream=False):
     page = await ctx.new_page()
     errors, requests = [], []
     page.on('pageerror', lambda e: errors.append(str(e)))
+    page.on('console', lambda m: errors.append(m.text) if 'Content Security Policy' in m.text else None)
     page.on('request', lambda r: requests.append(r.url))
     await page.goto(PAGE)
     await page.wait_for_function('typeof DICT !== "undefined" && DICT.ready', timeout=60000)
@@ -86,6 +87,15 @@ async def main():
         await page.evaluate("dropWord('bád', true)")
         check('removal applies to the same text', await clean(page, 'bád báid'), [])
         check('removal does not carry to new text', await clean(page, 'bád bróg'), ['bád', 'bróg'])
+
+        # hostile or unusual text
+        out = await clean(page, '<script>window.pwned=1</script><img src=x onerror="window.pwned=2"> bád')
+        await page.evaluate('go(3)')
+        check('markup in the text never runs', ['bád' in out, await page.evaluate('window.pwned || 0'),
+              await page.evaluate("document.querySelectorAll('#p3 img, #p3 script, #found img').length")], [True, 0, 0])
+        check("words like 'constructor' are plain words", await clean(page, 'constructor hconstructor', prep=True), ['constructor', 'hconstructor'])
+        check('accents typed as combining marks', await clean(page, 'ba\u0301id ba\u0301d b\u200bád'), ['bád'])
+        check('tokens over 40 letters are ignored', await clean(page, 'a' * 100000 + ' bád'), ['bád'])
 
         # CSV safety
         check('CSV formula cells are escaped', await page.evaluate("[csvCell('=1+1'), csvCell('a,b'), csvCell('bád')]"),

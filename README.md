@@ -11,18 +11,19 @@ python3 tests/test_app.py        # browser tests; needs: pip install playwright 
 
 The build is reproducible: the same sources always give byte-identical files.
 
-- `dist/glantoir.html` is a complete HTML document: open it in any browser, no internet needed.
+- `dist/glantoir.html` is a complete HTML document: open it in any browser, no internet needed, or upload it to a web server as `index.html`. It starts with a UTF-8 byte-order mark so fadas display correctly whatever charset the server sends.
+- `src/index.html` is the unbuilt source: it has no dictionary or scripts in it yet, so never upload it to a website.
 - `dist/artifact.html` is the same page without the `<html>`/`<head>` wrapper, for publishing as a claude.ai artifact, which adds its own.
 
 ## Design
 
-The page follows the Odhrán Roche style guide (odhranroche.com): paper and ink colours, green only for things you can act on, Lexend for headings and controls, Atkinson Hyperlegible for text, hairlines instead of cards, one filled button per screen, sentence case, and a blue focus outline. The two words compared in step 2 are the page's one bold element. Light theme only, written as tokens at the top of `src/page.html`.
+The page follows the Odhrán Roche style guide (odhranroche.com): paper and ink colours, green only for things you can act on, Lexend for headings and controls, Atkinson Hyperlegible for text, hairlines instead of cards, one filled button per screen, sentence case, and a blue focus outline. The two words compared in step 2 are the page's one bold element. Light theme only, written as tokens at the top of `src/index.html`.
 
 ## Files
 
 | Path | What it is |
 | --- | --- |
-| `src/page.html` | Styles and markup, with `/*APP*/` (the scripts) and `/*DICT*/` (the dictionary) placeholders. Fonts are referenced as `../assets/fonts/…` and inlined by the build. |
+| `src/index.html` | Styles and markup, with `/*APP*/` (the scripts) and `/*DICT*/` (the dictionary) placeholders. Fonts are referenced as `../assets/fonts/…` and inlined by the build. |
 | `src/engine.js` | Rules engine: dictionary loading (with a gzip fallback), mutations and prefixes, dictionary merges, ending rules, pair suggestions. |
 | `src/ui.js` | Interface: reading files and text, names and English, the three steps, saved choices, downloads. |
 | `build.py` | Joins the sources and embeds the data and fonts, producing `dist/glantoir.html` and `dist/artifact.html`. |
@@ -33,6 +34,30 @@ The page follows the Odhrán Roche style guide (odhranroche.com): paper and ink 
 | `scripts/make_english.py` | Rebuilds `data/english_top.txt` from wordfreq's `small_en.msgpack.gz`. |
 | `tests/test_app.py` | Rule, English, name, saved-choice, CSV, offline and fallback tests, plus snapshot counts for the two fixture texts. |
 | `tests/fixtures/` | Sample texts: Cúrsaí Oibre and An Teaghlach. |
+
+## Security
+
+The app is one static page. It has no server code, no accounts, and it never sends or loads anything over the network: text, choices and results stay in the visitor's browser (local storage, keys prefixed `glantoir:`). What a visitor pastes can only affect their own tab.
+
+- **Text is never treated as code.** Every word is added to the page as plain text (no `innerHTML`), so markup or script in a file is just more words.
+- **Content Security Policy** in `dist/glantoir.html`: only the page's own script and style block may run, pinned by SHA-256 hash; fonts and icons come from `data:` URIs; no network requests, forms or `<base>`. `build.py` recomputes the hashes on every build.
+- **Input limits:** files over 20 MB and binary files are refused; tokens over 40 letters are ignored so a huge "word" can't freeze the page; text is NFC-normalised and invisible format characters are removed.
+- **Lookup tables** keyed by words have no prototype, so words like *constructor* are ordinary words.
+- **CSV export** prefixes cells starting with = + - @ or a tab with ', so spreadsheets don't run them as formulas.
+- **Encoding:** the offline file starts with a UTF-8 byte-order mark, so a wrong server charset can't garble it.
+
+Headers worth adding on the web server (Hostinger `.htaccess` in the app's folder), because a meta tag can't set them:
+
+```apache
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "frame-ancestors 'none'"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "no-referrer"
+</IfModule>
+AddDefaultCharset UTF-8
+```
+
+`tests/test_app.py` includes checks for markup in the text, prototype keys, combining accents, very long tokens and Content Security Policy violations.
 
 ## Data sources
 
