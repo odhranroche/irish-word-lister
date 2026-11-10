@@ -298,7 +298,7 @@ function renderResult() {
   const outL = $('out-list'), top = outL.scrollTop; outL.textContent = '';
   for (const h of sorted(gs.map((g) => g.h))) {
     outL.append(el('div', { class: 'm' }, el('span', idx.has(h) ? null : { class: 'dict' }, disp(h)),
-      el('button', { onclick: (ev) => dropWord(h, true, ev.currentTarget.parentElement), title: `Remove ${disp(h)}`, 'aria-label': `Remove ${disp(h)}` }, '✕')));
+      el('button', { onclick: (ev) => dropWord(h, true, ev.currentTarget.parentElement), title: `Remove ${disp(h)}`, 'aria-label': `Remove ${disp(h)}` })));
   }
   outL.scrollTop = top;
   const inL = $('in-list'); inL.textContent = '';
@@ -314,7 +314,7 @@ function renderResult() {
     .sort((a, b) => a[1].h.localeCompare(b[1].h, 'ga') || a[0].localeCompare(b[0], 'ga'));
   for (const [w, k] of rows) {
     rm.append(el('div', { class: 'm', title: plainWhy(k.why) }, el('span', null, disp(w)), el('span', { class: 'muted' }, '→'), el('b', null, disp(k.h)),
-      el('button', { onclick: () => keepSeparate(w), title: `Keep ${disp(w)} separate`, 'aria-label': `Keep ${disp(w)} separate` }, '✕')));
+      el('button', { onclick: () => keepSeparate(w), title: `Keep ${disp(w)} separate`, 'aria-label': `Keep ${disp(w)} separate` })));
   }
   if (!rows.length) rm.append(el('div', { class: 'muted' }, q ? 'No match' : 'Nothing merged'));
   $('rm-h').textContent = `Merged (${keptAs.size.toLocaleString()})`;
@@ -324,11 +324,11 @@ function renderResult() {
     const n = neitherWords(s).length - 2;
     ex.append(el('div', { class: 'm', title: neitherWords(s).map(disp).join(', ') }, el('span', null, `${disp(s.a)}, ${disp(s.b)}`),
       n > 0 ? el('span', { class: 'muted' }, `+${n} form${n > 1 ? 's' : ''}`) : null,
-      el('button', { onclick: () => { delete DEC[s.id]; store.set('decisions', DEC); refresh(); renderResult(); }, title: 'Restore' }, '↺')));
+      el('button', { onclick: () => { delete DEC[s.id]; store.set('decisions', DEC); refresh(); renderResult(); }, class: 'undo', title: 'Restore', 'aria-label': `Restore ${disp(s.a)} and ${disp(s.b)}` })));
   }
   for (const g of gone.filter((g) => DROPPED.has(g.h)).sort((a, b) => a.h.localeCompare(b.h, 'ga'))) {
     ex.append(el('div', { class: 'm' }, el('span', null, disp(g.h)),
-      el('button', { onclick: () => dropWord(g.h, false), title: 'Restore', 'aria-label': `Restore ${disp(g.h)}` }, '↺')));
+      el('button', { onclick: () => dropWord(g.h, false), class: 'undo', title: 'Restore', 'aria-label': `Restore ${disp(g.h)}` })));
   }
   $('ex-h').textContent = `Removed (${goneWords.size})`;
 }

@@ -5,20 +5,28 @@ A single-page, offline tool that removes duplicate forms from an Irish word list
 ## Build and test
 
 ```sh
-python3 build.py                 # -> dist/glantoir.html (one self-contained file, about 960 KB)
+python3 build.py                 # -> dist/glantoir.html (offline app, about 1.05 MB) and dist/artifact.html
 python3 tests/test_app.py        # browser tests; needs: pip install playwright && playwright install chromium
 ```
 
-The build is reproducible: the same sources always give a byte-identical `dist/glantoir.html`.
+The build is reproducible: the same sources always give byte-identical files.
+
+- `dist/glantoir.html` is a complete HTML document: open it in any browser, no internet needed.
+- `dist/artifact.html` is the same page without the `<html>`/`<head>` wrapper, for publishing as a claude.ai artifact, which adds its own.
+
+## Design
+
+The page follows the Odhrán Roche style guide (odhranroche.com): paper and ink colours, green only for things you can act on, Lexend for headings and controls, Atkinson Hyperlegible for text, hairlines instead of cards, one filled button per screen, sentence case, and a blue focus outline. The two words compared in step 2 are the page's one bold element. Light theme only, written as tokens at the top of `src/page.html`.
 
 ## Files
 
 | Path | What it is |
 | --- | --- |
-| `src/page.html` | Styles and markup, with `/*APP*/` (the scripts) and `/*DICT*/` (the dictionary) placeholders. |
+| `src/page.html` | Styles and markup, with `/*APP*/` (the scripts) and `/*DICT*/` (the dictionary) placeholders. Fonts are referenced as `../assets/fonts/…` and inlined by the build. |
 | `src/engine.js` | Rules engine: dictionary loading (with a gzip fallback), mutations and prefixes, dictionary merges, ending rules, pair suggestions. |
 | `src/ui.js` | Interface: reading files and text, names and English, the three steps, saved choices, downloads. |
-| `build.py` | Joins the sources and embeds the data, producing `dist/glantoir.html`. |
+| `build.py` | Joins the sources and embeds the data and fonts, producing `dist/glantoir.html` and `dist/artifact.html`. |
+| `assets/fonts/` | Lexend (400, 500, 600) and Atkinson Hyperlegible (400, 700), Latin subsets, with their licences. |
 | `data/bunamo_index.txt` | Compact BuNaMo index: one line per entry, `lemma \t pos \t gender \t type:form,…`. pos is n, a, v, p, or N for a proper noun. |
 | `data/english_top.txt` | The 5,000 most frequent English words, one per line. |
 | `scripts/build_index.py` | Rebuilds `data/bunamo_index.txt` from a BuNaMo checkout (https://github.com/michmech/BuNaMo). |
@@ -30,6 +38,7 @@ The build is reproducible: the same sources always give a byte-identical `dist/g
 
 - BuNaMo © Foras na Gaeilge, Open Database Licence (ODbL). `data/bunamo_index.txt` is derived from it and stays under the ODbL.
 - wordfreq data by Robyn Speer, CC BY-SA 4.0. `data/english_top.txt` is derived from it.
+- Lexend © The Lexend Project Authors and Atkinson Hyperlegible © Braille Institute of America, both under the SIL Open Font License 1.1 (`assets/fonts/OFL-*.txt`).
 
 ## Order of the rules
 
