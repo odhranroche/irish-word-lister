@@ -48,7 +48,7 @@ def main():
            '<meta name="referrer" content="no-referrer">\n'
            '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
            f'<title>{title}</title>\n'
-           f'<meta name="description" content="{title}: merge every form of an Irish word into its headword. Works offline.">\n'
+           f'<meta name="description" content="{title} collects the unique words from an Irish-language document, merging grammatical forms into one dictionary headword. Works offline.">\n'
            '</head>\n<body>\n' + re.sub(r'<title>.*?</title>\n', '', body, count=1) + '</body>\n</html>\n')
     # dist/ holds exactly one file. It starts with a UTF-8 byte-order mark: browsers trust it over everything
     # else, so the fadas display correctly even when a web server sends a wrong charset (á shown as Ã¡).
